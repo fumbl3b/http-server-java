@@ -9,13 +9,16 @@ public class Main {
     
     try {
       ServerSocket serverSocket = new ServerSocket(4221);
+      Socket clientSocket = null;
     
       // Since the tester restarts your program quite often, setting SO_REUSEADDR
       // ensures that we don't run into 'Address already in use' errors
       serverSocket.setReuseAddress(true);
     
-      serverSocket.accept(); // Wait for connection from client.
+      clientSocket = serverSocket.accept(); // Wait for connection from client.
       System.out.println("accepted new connection");
+      clientSocket.getOutputStream().write("HTTP/1.1 200 OK".getBytes());
+      clientSocket.close();
     } catch (IOException e) {
       System.out.println("IOException: " + e.getMessage());
     }
