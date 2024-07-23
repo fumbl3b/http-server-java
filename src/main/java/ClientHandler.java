@@ -13,37 +13,33 @@ public class ClientHandler implements Runnable {
     
     @Override
     public void run() {
+        HttpRequest request = null;
         try (BufferedReader in = 
                 new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             OutputStream out = 
                 clientSocket.getOutputStream();) {
-        
             // Parse the request line
-            // TODO: add POST, FETCH, 
-            String requestLine = in.readLine();
-            if (requestLine == null || !requestLine.startsWith("GET")) {
+            try {
+                request = new HttpRequest(in);
+            } catch (IllegalArgumentException | IOException e) {
+                sendResponse(out, 400, "Bad Request");
+            }
+            // Logging
+            System.out.println("Received: \n" + request);
+            if (!"GET".equalsIgnoreCase(request.getMethod())) {
                 sendResponse(out, 405, "Method Not Allowed");
-                return;
-            }
-
-            String[] requestParts = requestLine.split(" ", 0);
-
-            //TODO: remove this
-            for (String s : requestParts) {
-                System.out.println(s);
-            }
-
-            if (requestParts[1].equals("/")) {
-                sendResponse(out, 200, "");
-            } else if (requestParts[1].startsWith("/echo/")) {
-                sendResponse(out, 200, requestParts[1].substring(6));
-            } else {
-                out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
             }
             
-
+            String requestUri = request.getUri();
+            if (requestUri.equals("/")) sendResponse(out, 200, "");
+            else if (requestUri.startsWith("/echo/")) sendResponse(out, 200, requestUri.substring(6));
+            else if (requestUri.equals("/user-agent") ) {
+                String userAgent = request.getHeaders().get("User-Agent");
+                sendResponse(out, 200, userAgent);
+            }
+            else out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
         } catch (IOException e) {
-            
+            e.printStackTrace();
         }
 
     }
