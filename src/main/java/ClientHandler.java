@@ -26,15 +26,15 @@ public class ClientHandler implements Runnable {
             try {
                 request = new HttpRequest(in);
             } catch (IllegalArgumentException | IOException e) {
-                sendResponse(out, 400, "Bad Request");
+                sendResponse(out, 400, "", "Bad Request");
             }
             // Logging
             System.out.println("Received: \n" + request);
             String requestUri = request.getUri();
 
             if ("GET".equalsIgnoreCase(request.getMethod())) {
-                if (requestUri.equals("/")) sendResponse(out, 200, "");
-                else if (requestUri.startsWith("/echo/")) sendResponse(out, 200, requestUri.substring(6));
+                if (requestUri.equals("/")) sendResponse(out, 200, "", null);
+                else if (requestUri.startsWith("/echo/")) sendResponse(out, 200, requestUri.substring(6), null);
                 else if (requestUri.equals("/user-agent") ) {
                     String userAgent = request.getHeaders().get("User-Agent");
                     sendResponse(out, 200, userAgent);
@@ -46,10 +46,10 @@ public class ClientHandler implements Runnable {
                 if (requestUri.startsWith("/files/")) {
                     handleFileCreation(out, requestUri, request);
                 } else {
-                    sendResponse(out, 404, "Not Found");
+                    sendResponse(out, 404, "", "Not Found");
                 }
             } else {
-                sendResponse(out, 405, "Method Not Allowed");
+                sendResponse(out, 405, "", "Method Not Allowed");
             }
             
         } catch (IOException e) {
@@ -105,7 +105,7 @@ public class ClientHandler implements Runnable {
         File file = new File("/tmp/" + filename);
 
         if (file.exists()) {
-            sendResponse(out, 409, "File Already Exists");
+            sendResponse(out, 409, "", "File Already Exists");
             return;
         }
 
@@ -113,11 +113,12 @@ public class ClientHandler implements Runnable {
             fos.write(request.getBody().getBytes());
         }
 
-        sendResponse(out, 201, "File Created");
+        sendResponse(out, 201, "File Created", "Created");
     }
 
-    private void sendResponse(OutputStream out, int statusCode, String responseText) throws IOException {
-        String response = "HTTP/1.1 " + statusCode + " OK\r\n" +
+    private void sendResponse(OutputStream out, int statusCode, String responseText, String reason) throws IOException {
+        if (reason == null) reason = "OK";
+        String response = "HTTP/1.1 " + statusCode + " " + reason + "\r\n" +
                           "Content-Type: text/plain\r\n" +
                           "Content-Length: " + responseText.length() + "\r\n" +
                           "\r\n" +
