@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -29,20 +30,28 @@ public class ClientHandler implements Runnable {
             }
             // Logging
             System.out.println("Received: \n" + request);
-            if (!"GET".equalsIgnoreCase(request.getMethod())) {
+            String requestUri = request.getUri();
+
+            if ("GET".equalsIgnoreCase(request.getMethod())) {
+                if (requestUri.equals("/")) sendResponse(out, 200, "");
+                else if (requestUri.startsWith("/echo/")) sendResponse(out, 200, requestUri.substring(6));
+                else if (requestUri.equals("/user-agent") ) {
+                    String userAgent = request.getHeaders().get("User-Agent");
+                    sendResponse(out, 200, userAgent);
+                } else if (requestUri.startsWith("/files/")) {
+                    handleFileRequest(out, requestUri);
+                }
+                else out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+            } else if ("POST".equalsIgnoreCase(request.getMethod())) {
+                if (requestUri.startsWith("/files/")) {
+                    handleFileCreation(out, requestUri, request);
+                } else {
+                    sendResponse(out, 404, "Not Found");
+                }
+            } else {
                 sendResponse(out, 405, "Method Not Allowed");
             }
             
-            String requestUri = request.getUri();
-            if (requestUri.equals("/")) sendResponse(out, 200, "");
-            else if (requestUri.startsWith("/echo/")) sendResponse(out, 200, requestUri.substring(6));
-            else if (requestUri.equals("/user-agent") ) {
-                String userAgent = request.getHeaders().get("User-Agent");
-                sendResponse(out, 200, userAgent);
-            } else if (requestUri.startsWith("/files/")) {
-                handleFileRequest(out, requestUri);
-            }
-            else out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -88,8 +97,23 @@ public class ClientHandler implements Runnable {
                 }
             }
         }
-
         return null;
+    }
+
+    private void handleFileCreation(OutputStream out, String requestUri, HttpRequest request) throws IOException {
+        String filename = requestUri.substring("/files/".length());
+        File file = new File("./tmp/" + filename);
+
+        if (file.exists()) {
+            sendResponse(out, 409, "File Already Exists");
+            return;
+        }
+
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(request.getBody().getBytes());
+        }
+
+        sendResponse(out, 201, "File Created");
     }
 
     private void sendResponse(OutputStream out, int statusCode, String responseText) throws IOException {
