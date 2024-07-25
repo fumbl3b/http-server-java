@@ -102,7 +102,7 @@ public class ClientHandler implements Runnable {
 
     private void handleFileCreation(OutputStream out, String requestUri, HttpRequest request) throws IOException {
         String filename = requestUri.substring("/files/".length());
-        File file = new File("/tmp/" + filename);
+        File file = new File("/tmp/data/codecrafters.io/http-server-tester/" + filename);
 
         if (file.exists()) {
             sendResponse(out, 409, "", "File Already Exists");
