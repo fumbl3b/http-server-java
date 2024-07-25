@@ -37,7 +37,7 @@ public class ClientHandler implements Runnable {
                 else if (requestUri.startsWith("/echo/")) sendResponse(out, 200, requestUri.substring(6), null);
                 else if (requestUri.equals("/user-agent") ) {
                     String userAgent = request.getHeaders().get("User-Agent");
-                    sendResponse(out, 200, userAgent);
+                    sendResponse(out, 200, userAgent, null);
                 } else if (requestUri.startsWith("/files/")) {
                     handleFileRequest(out, requestUri);
                 }
